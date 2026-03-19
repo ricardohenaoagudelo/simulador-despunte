@@ -9,7 +9,6 @@ const PRICE_PER_KG = 7500;
 const FEED_COST_PER_KG = 1800;
 const DAYS_EXTRA = 7;
 const ADG = 0.82;
-const PIGS_PER_PEN = 20;
 const LOT_AGES = [147, 154, 160, 167, 174, 181, 188, 195];
 
 function projectedFCR(weight) {
@@ -36,9 +35,9 @@ function marginalScore(weight, targetWeight) {
   return margin + marketBonus * 1000;
 }
 
-function buildPigWeights(lotIndex, penIndex) {
+function buildPigWeights(lotIndex, penIndex, pigsPerPen) {
   const base = 96 + lotIndex * 3 + Math.floor(lotIndex / 2);
-  return Array.from({ length: PIGS_PER_PEN }, (_, pigIndex) => {
+  return Array.from({ length: pigsPerPen }, (_, pigIndex) => {
     const progressive = pigIndex * 1.55;
     const penEffect = (penIndex % 5) * 0.7;
     const wave = ((pigIndex + penIndex + lotIndex) % 4) * 0.8;
@@ -46,18 +45,16 @@ function buildPigWeights(lotIndex, penIndex) {
   });
 }
 
-function generatePens(numLots, pensPerLot) {
+function generatePens(numLots, pensPerLot, pigsPerPen) {
   return Array.from({ length: numLots }, (_, lotIndex) => {
     const lote = `Lote ${lotIndex + 1}`;
-    const edad =
-      LOT_AGES[lotIndex] ??
-      LOT_AGES[LOT_AGES.length - 1] + (lotIndex - LOT_AGES.length + 1) * 7;
+    const edad = LOT_AGES[lotIndex] ?? LOT_AGES[LOT_AGES.length - 1] + (lotIndex - LOT_AGES.length + 1) * 7;
 
     return Array.from({ length: pensPerLot }, (_, penIndex) => ({
       lote,
       edad,
       corral: `Corral ${lotIndex + 1}${String.fromCharCode(65 + penIndex)}`,
-      pigs: buildPigWeights(lotIndex, penIndex),
+      pigs: buildPigWeights(lotIndex, penIndex, pigsPerPen),
     }));
   }).flat();
 }
@@ -97,10 +94,7 @@ function Pig({ pig, selected, onToggle }) {
           : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
       } cursor-pointer`}
     >
-      <div
-        style={{ transform: `scale(${pig.size})` }}
-        className="origin-center select-none leading-none transition-transform"
-      >
+      <div style={{ transform: `scale(${pig.size})` }} className="origin-center select-none leading-none transition-transform">
         🐖
       </div>
       <div className="mt-2 text-sm font-semibold text-slate-800">{pig.weight} kg</div>
@@ -118,11 +112,16 @@ function Pig({ pig, selected, onToggle }) {
 export default function App() {
   const [numLots, setNumLots] = useState(4);
   const [pensPerLot, setPensPerLot] = useState(10);
+  const [pigsPerPen, setPigsPerPen] = useState(20);
   const [targetWeight, setTargetWeight] = useState(120);
+  const [dispatchCount, setDispatchCount] = useState(40);
   const [selectedIds, setSelectedIds] = useState([]);
   const [evaluated, setEvaluated] = useState(false);
 
-  const penConfig = useMemo(() => generatePens(numLots, pensPerLot), [numLots, pensPerLot]);
+  const penConfig = useMemo(() => generatePens(numLots, pensPerLot, pigsPerPen), [numLots, pensPerLot, pigsPerPen]);
+  const totalPigs = numLots * pensPerLot * pigsPerPen;
+
+  const maxSelection = useMemo(() => Math.min(dispatchCount, totalPigs), [dispatchCount, totalPigs]);
 
   const allPigs = useMemo(
     () =>
@@ -152,11 +151,6 @@ export default function App() {
     [penConfig, targetWeight]
   );
 
-  const maxSelection = useMemo(
-    () => Math.max(8, Math.round((numLots * pensPerLot) / 1)),
-    [numLots, pensPerLot]
-  );
-
   const optimalSet = useMemo(
     () =>
       allPigs
@@ -172,14 +166,8 @@ export default function App() {
     [allPigs, maxSelection, targetWeight]
   );
 
-  const optimalPigs = useMemo(
-    () => allPigs.filter((pig) => optimalSet.includes(pig.id)),
-    [allPigs, optimalSet]
-  );
-  const selectedPigs = useMemo(
-    () => allPigs.filter((pig) => selectedIds.includes(pig.id)),
-    [allPigs, selectedIds]
-  );
+  const optimalPigs = useMemo(() => allPigs.filter((pig) => optimalSet.includes(pig.id)), [allPigs, optimalSet]);
+  const selectedPigs = useMemo(() => allPigs.filter((pig) => selectedIds.includes(pig.id)), [allPigs, selectedIds]);
 
   const applyScenario = () => {
     setSelectedIds([]);
@@ -202,18 +190,13 @@ export default function App() {
 
   const selectedAvg =
     selectedPigs.length > 0
-      ? (
-          selectedPigs.reduce((sum, pig) => sum + pig.weight, 0) / selectedPigs.length
-        ).toFixed(1)
+      ? (selectedPigs.reduce((sum, pig) => sum + pig.weight, 0) / selectedPigs.length).toFixed(1)
       : "0.0";
 
-  const accuracy = Math.round(
-    (selectedIds.filter((id) => optimalSet.includes(id)).length / maxSelection) * 100
-  );
+  const accuracy = maxSelection > 0 ? Math.round((selectedIds.filter((id) => optimalSet.includes(id)).length / maxSelection) * 100) : 0;
   const selectedScore = selectedPigs.reduce((sum, pig) => sum + pig.score, 0);
   const optimalScore = optimalPigs.reduce((sum, pig) => sum + pig.score, 0);
-  const efficiency =
-    optimalScore > 0 ? Math.max(0, Math.round((selectedScore / optimalScore) * 100)) : 0;
+  const efficiency = optimalScore > 0 ? Math.max(0, Math.round((selectedScore / optimalScore) * 100)) : 0;
 
   const feedback =
     accuracy >= 80
@@ -225,36 +208,23 @@ export default function App() {
   const lots = Array.from({ length: numLots }, (_, i) => `Lote ${i + 1}`);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-stone-50 to-emerald-50 p-6 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-stone-50 to-emerald-50 p-4 md:p-6 text-slate-900">
       <div className="mx-auto max-w-7xl space-y-6">
         <Card className="overflow-hidden rounded-3xl border-0 shadow-xl">
-          <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-8 text-white">
+          <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-6 md:p-8 text-white">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <div className="mb-2 text-sm uppercase tracking-[0.2em] text-emerald-100">
-                  Simulador Web
-                </div>
-                <h1 className="text-3xl font-bold md:text-4xl">
-                  Despunte estratégico de cerdos
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm text-emerald-50 md:text-base">
-                  Configura cuántos lotes, cuántos corrales y cuál es el peso objetivo. El
-                  sistema ajusta automáticamente el escenario, el número de animales a
-                  seleccionar y el óptimo teórico de despacho.
+                <div className="mb-2 text-xs md:text-sm uppercase tracking-[0.2em] text-emerald-100">Simulador Web</div>
+                <h1 className="text-3xl font-bold md:text-4xl">Despunte estratégico de cerdos</h1>
+                <p className="mt-3 max-w-3xl text-sm md:text-base text-emerald-50">
+                  Configura cuántos lotes, cuántos corrales, cuántos cerdos por corral, cuántos quieres despachar y cuál es el peso objetivo.
                 </p>
               </div>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setEvaluated(true)}
-                  className="rounded-2xl bg-white text-emerald-700 hover:bg-emerald-50"
-                >
+              <div className="grid w-full gap-3 md:flex md:w-auto md:flex-row">
+                <Button onClick={() => setEvaluated(true)} className="rounded-2xl bg-white text-emerald-700 hover:bg-emerald-50 min-h-[52px] px-5">
                   Evaluar selección
                 </Button>
-                <Button
-                  onClick={resetGame}
-                  variant="outline"
-                  className="rounded-2xl border-white/70 bg-transparent text-white hover:bg-white/10"
-                >
+                <Button onClick={resetGame} variant="outline" className="rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[52px] px-5">
                   <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
                 </Button>
               </div>
@@ -264,73 +234,36 @@ export default function App() {
 
         <Card className="rounded-3xl shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings2 className="h-5 w-5" /> Configuración del escenario
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5" /> Configuración del escenario</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-5">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Número de lotes</label>
-                <select
-                  value={numLots}
-                  onChange={(e) => setNumLots(Number(e.target.value))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
-                >
-                  {[1, 2, 3, 4].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                <select value={numLots} onChange={(e) => setNumLots(Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none">
+                  {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Corrales por lote
-                </label>
-                <select
-                  value={pensPerLot}
-                  onChange={(e) => setPensPerLot(Number(e.target.value))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
-                >
-                  {[2, 4, 6, 8, 10].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
+                <label className="text-sm font-medium text-slate-700">Corrales por lote</label>
+                <select value={pensPerLot} onChange={(e) => setPensPerLot(Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none">
+                  {[2, 4, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Peso objetivo (kg)
-                </label>
-                <input
-                  type="number"
-                  min="100"
-                  max="140"
-                  step="1"
-                  value={targetWeight}
-                  onChange={(e) => setTargetWeight(Number(e.target.value) || 120)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
-                />
+                <label className="text-sm font-medium text-slate-700">Cerdos por corral</label>
+                <input type="number" min="5" max="50" step="1" value={pigsPerPen} onChange={(e) => setPigsPerPen(Number(e.target.value) || 20)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">
-                  Cerdos por corral
-                </label>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold text-slate-800">
-                  20
-                </div>
+                <label className="text-sm font-medium text-slate-700">Peso objetivo (kg)</label>
+                <input type="number" min="100" max="140" step="1" value={targetWeight} onChange={(e) => setTargetWeight(Number(e.target.value) || 120)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
               </div>
-
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">Cerdos a despachar</label>
+                <input type="number" min="1" max={totalPigs} step="1" value={dispatchCount} onChange={(e) => setDispatchCount(Number(e.target.value) || 1)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
+              </div>
               <div className="flex items-end">
-                <Button
-                  onClick={applyScenario}
-                  className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700"
-                >
+                <Button onClick={applyScenario} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 min-h-[52px]">
                   Aplicar escenario
                 </Button>
               </div>
@@ -338,19 +271,11 @@ export default function App() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-5">
-          <StatPill
-            icon={PiggyBank}
-            label="Seleccionados"
-            value={`${selectedIds.length}/${maxSelection}`}
-          />
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <StatPill icon={PiggyBank} label="Seleccionados" value={`${selectedIds.length}/${maxSelection}`} />
           <StatPill icon={Scale} label="Peso promedio" value={`${selectedAvg} kg`} />
           <StatPill icon={Target} label="Acierto vs óptimo" value={`${accuracy}%`} />
-          <StatPill
-            icon={CheckCircle2}
-            label="Eficiencia económica"
-            value={`${efficiency}%`}
-          />
+          <StatPill icon={CheckCircle2} label="Eficiencia económica" value={`${efficiency}%`} />
           <StatPill icon={Target} label="Peso objetivo" value={`${targetWeight} kg`} />
         </div>
 
@@ -362,10 +287,7 @@ export default function App() {
               return (
                 <div key={lote} className="space-y-3">
                   <h2 className="text-xl font-bold text-slate-800">
-                    {lote}{" "}
-                    <span className="text-base font-medium text-slate-500">
-                      ({edad} días)
-                    </span>
+                    {lote} <span className="text-base font-medium text-slate-500">({edad} días)</span>
                   </h2>
                   <div className="grid gap-4 md:grid-cols-2">
                     {pens.map((pen) => {
@@ -375,20 +297,13 @@ export default function App() {
                           <CardHeader className="pb-3">
                             <CardTitle className="flex items-center justify-between text-lg">
                               {pen.corral}
-                              <Badge className="rounded-full bg-slate-100 text-slate-700">
-                                {pigs.length} cerdos
-                              </Badge>
+                              <Badge className="rounded-full bg-slate-100 text-slate-700">{pigs.length} cerdos</Badge>
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                               {pigs.map((pig) => (
-                                <Pig
-                                  key={pig.id}
-                                  pig={pig}
-                                  selected={selectedIds.includes(pig.id)}
-                                  onToggle={togglePig}
-                                />
+                                <Pig key={pig.id} pig={pig} selected={selectedIds.includes(pig.id)} onToggle={togglePig} />
                               ))}
                             </div>
                           </CardContent>
@@ -408,22 +323,12 @@ export default function App() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-slate-600">
                 <p>Haz clic sobre los cerdos que enviarías a sacrificio.</p>
-                <p>
-                  El modelo compara tu selección con una estrategia óptima basada en
-                  cercanía al peso objetivo, margen y penalización por dejar animales
-                  pasados o sacar animales muy livianos.
-                </p>
-                <p className="font-semibold text-slate-800">
-                  Objetivo: seleccionar {maxSelection} animales alrededor de {targetWeight} kg.
-                </p>
+                <p>El modelo compara tu selección con una estrategia óptima basada en cercanía al peso objetivo, margen y penalización por dejar animales pasados o sacar animales muy livianos.</p>
+                <p className="font-semibold text-slate-800">Objetivo: seleccionar {maxSelection} animales alrededor de {targetWeight} kg.</p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Badge className="rounded-full bg-sky-100 text-sky-700">Liviano</Badge>
-                  <Badge className="rounded-full bg-amber-100 text-amber-700">
-                    Intermedio
-                  </Badge>
-                  <Badge className="rounded-full bg-emerald-100 text-emerald-700">
-                    Óptimo
-                  </Badge>
+                  <Badge className="rounded-full bg-amber-100 text-amber-700">Intermedio</Badge>
+                  <Badge className="rounded-full bg-emerald-100 text-emerald-700">Óptimo</Badge>
                   <Badge className="rounded-full bg-rose-100 text-rose-700">Pasado</Badge>
                 </div>
               </CardContent>
@@ -437,18 +342,12 @@ export default function App() {
                 {selectedPigs.length === 0 ? (
                   <p className="text-slate-500">Aún no has seleccionado cerdos.</p>
                 ) : (
-                  selectedPigs
-                    .slice()
-                    .sort((a, b) => b.weight - a.weight)
-                    .map((pig) => (
-                      <div
-                        key={pig.id}
-                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"
-                      >
-                        <span className="font-medium">{pig.id}</span>
-                        <span className="text-slate-600">{pig.weight} kg</span>
-                      </div>
-                    ))
+                  selectedPigs.slice().sort((a, b) => b.weight - a.weight).map((pig) => (
+                    <div key={pig.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
+                      <span className="font-medium">{pig.id}</span>
+                      <span className="text-slate-600">{pig.weight} kg</span>
+                    </div>
+                  ))
                 )}
               </CardContent>
             </Card>
@@ -473,9 +372,7 @@ export default function App() {
                     </div>
                   </div>
                   <div>
-                    <div className="mb-2 font-semibold text-slate-900">
-                      Y tú seleccionaste estos:
-                    </div>
+                    <div className="mb-2 font-semibold text-slate-900">Y tú seleccionaste estos:</div>
                     <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
                       <div className="flex flex-wrap gap-2">
                         {selectedPigs.map((pig) => (
