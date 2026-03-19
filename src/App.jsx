@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
 import { RotateCcw, CheckCircle2, PiggyBank, Scale, Target, Settings2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const PRICE_PER_KG = 7500;
 const FEED_COST_PER_KG = 1800;
@@ -204,6 +205,24 @@ export default function App() {
       ? "Buen criterio: estuviste cerca del óptimo, pero dejaste algunos cerdos clave."
       : "El lote todavía te ganó: seleccionaste varios animales fuera del punto más rentable.";
 
+  const chartData = useMemo(() => {
+    const bins = [
+      { label: "<105", min: -Infinity, max: 105 },
+      { label: "105-109", min: 105, max: 110 },
+      { label: "110-114", min: 110, max: 115 },
+      { label: "115-119", min: 115, max: 120 },
+      { label: "120-124", min: 120, max: 125 },
+      { label: "125-129", min: 125, max: 130 },
+      { label: ">=130", min: 130, max: Infinity },
+    ];
+
+    return bins.map((bin) => ({
+      rango: bin.label,
+      seleccionados: selectedPigs.filter((pig) => pig.weight >= bin.min && pig.weight < bin.max).length,
+      optimos: optimalPigs.filter((pig) => pig.weight >= bin.min && pig.weight < bin.max).length,
+    }));
+  }, [selectedPigs, optimalPigs]);
+
   const lots = Array.from({ length: numLots }, (_, i) => `Lote ${i + 1}`);
 
   return (
@@ -213,7 +232,7 @@ export default function App() {
           <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-6 md:p-8 text-white">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <div className="mb-2 text-xs md:text-sm uppercase tracking-[0.2em] text-emerald-100">Simulador Web</div>
+                <div className="mb-2 text-xs md:text-sm uppercase tracking-[0.2em] text-emerald-100">Simulador Web "Creado por Ricardo Henao"</div>
                 <h1 className="text-3xl font-bold md:text-4xl">Despunte estratégico de cerdos</h1>
                 <p className="mt-3 max-w-3xl text-sm md:text-base text-emerald-50">
                   Configura cuántos lotes, cuántos corrales, cuántos cerdos por corral, cuántos quieres despachar y cuál es el peso objetivo.
@@ -387,38 +406,61 @@ export default function App() {
             </Card>
 
             {evaluated && (
-              <Card className="rounded-3xl border-emerald-200 bg-emerald-50/60 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Resultado</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-900">{feedback}</p>
-                  <div>
-                    <div className="mb-2 font-semibold text-slate-900">El óptimo era este:</div>
-                    <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
-                      <div className="flex flex-wrap gap-2">
-                        {optimalPigs.map((pig) => (
-                          <Badge key={pig.id} className="rounded-full bg-emerald-600 text-white">
-                            {pig.id} · {pig.weight} kg
-                          </Badge>
-                        ))}
+              <>
+                <Card className="rounded-3xl border-emerald-200 bg-emerald-50/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Resultado</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-slate-700">
+                    <p className="font-semibold text-slate-900">{feedback}</p>
+                    <div>
+                      <div className="mb-2 font-semibold text-slate-900">El óptimo era este:</div>
+                      <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
+                        <div className="flex flex-wrap gap-2">
+                          {optimalPigs.map((pig) => (
+                            <Badge key={pig.id} className="rounded-full bg-emerald-600 text-white">
+                              {pig.id} · {pig.weight} kg
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="mb-2 font-semibold text-slate-900">Y tú seleccionaste estos:</div>
-                    <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
-                      <div className="flex flex-wrap gap-2">
-                        {selectedPigs.map((pig) => (
-                          <Badge key={pig.id} className="rounded-full bg-slate-700 text-white">
-                            {pig.id} · {pig.weight} kg
-                          </Badge>
-                        ))}
+                    <div>
+                      <div className="mb-2 font-semibold text-slate-900">Y tú seleccionaste estos:</div>
+                      <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
+                        <div className="flex flex-wrap gap-2">
+                          {selectedPigs.map((pig) => (
+                            <Badge key={pig.id} className="rounded-full bg-slate-700 text-white">
+                              {pig.id} · {pig.weight} kg
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-3xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Gráfico comparativo</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[280px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="rango" fontSize={12} />
+                          <YAxis allowDecimals={false} fontSize={12} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="seleccionados" name="Tu selección" fill="#334155" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="optimos" name="Óptimo" fill="#059669" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </div>
