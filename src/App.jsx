@@ -74,14 +74,7 @@ function StatPill({ icon: Icon, label, value }) {
 }
 
 function Pig({ pig, selected, onToggle }) {
-  const badgeTone =
-    pig.category === "Óptimo"
-      ? "bg-emerald-100 text-emerald-700"
-      : pig.category === "Pasado"
-      ? "bg-rose-100 text-rose-700"
-      : pig.category === "Intermedio"
-      ? "bg-amber-100 text-amber-700"
-      : "bg-sky-100 text-sky-700";
+  
 
   return (
     <motion.button
@@ -99,7 +92,7 @@ function Pig({ pig, selected, onToggle }) {
       </div>
       <div className="mt-2 text-sm font-semibold text-slate-800">{pig.weight} kg</div>
       <div className="mt-1 text-[11px] text-slate-500">{pig.id}</div>
-      <Badge className={`mt-2 rounded-full ${badgeTone}`}>{pig.category}</Badge>
+      
       {selected && (
         <div className="absolute right-2 top-2 rounded-full bg-emerald-500 p-1 text-white">
           <CheckCircle2 className="h-4 w-4" />
@@ -112,16 +105,19 @@ function Pig({ pig, selected, onToggle }) {
 export default function App() {
   const [numLots, setNumLots] = useState(4);
   const [pensPerLot, setPensPerLot] = useState(10);
-  const [pigsPerPen, setPigsPerPen] = useState(20);
-  const [targetWeight, setTargetWeight] = useState(120);
-  const [dispatchCount, setDispatchCount] = useState(40);
+  const [pigsPerPenInput, setPigsPerPenInput] = useState("20");
+  const [targetWeightInput, setTargetWeightInput] = useState("120");
+  const [dispatchCountInput, setDispatchCountInput] = useState("40");
   const [selectedIds, setSelectedIds] = useState([]);
   const [evaluated, setEvaluated] = useState(false);
 
+  const pigsPerPen = Math.max(1, Math.min(50, Number(pigsPerPenInput) || 20));
+  const targetWeight = Math.max(100, Math.min(140, Number(targetWeightInput) || 120));
+
   const penConfig = useMemo(() => generatePens(numLots, pensPerLot, pigsPerPen), [numLots, pensPerLot, pigsPerPen]);
   const totalPigs = numLots * pensPerLot * pigsPerPen;
-
-  const maxSelection = useMemo(() => Math.min(dispatchCount, totalPigs), [dispatchCount, totalPigs]);
+  const dispatchCount = Math.max(1, Math.min(totalPigs || 1, Number(dispatchCountInput) || 1));
+  const maxSelection = dispatchCount;
 
   const allPigs = useMemo(
     () =>
@@ -172,6 +168,9 @@ export default function App() {
   const applyScenario = () => {
     setSelectedIds([]);
     setEvaluated(false);
+    setPigsPerPenInput(String(pigsPerPen));
+    setTargetWeightInput(String(targetWeight));
+    setDispatchCountInput(String(dispatchCount));
   };
 
   const togglePig = (id) => {
@@ -220,11 +219,18 @@ export default function App() {
                   Configura cuántos lotes, cuántos corrales, cuántos cerdos por corral, cuántos quieres despachar y cuál es el peso objetivo.
                 </p>
               </div>
-              <div className="grid w-full gap-3 md:flex md:w-auto md:flex-row">
-                <Button onClick={() => setEvaluated(true)} className="rounded-2xl bg-white text-emerald-700 hover:bg-emerald-50 min-h-[52px] px-5">
-                  Evaluar selección
+              <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto md:min-w-[360px]">
+                <Button
+                  onClick={() => setEvaluated(true)}
+                  className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
+                >
+                  <span className="inline-flex w-full items-center justify-center">Evaluar selección</span>
                 </Button>
-                <Button onClick={resetGame} variant="outline" className="rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[52px] px-5">
+                <Button
+                  onClick={resetGame}
+                  variant="outline"
+                  className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
+                >
                   <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
                 </Button>
               </div>
@@ -252,15 +258,42 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Cerdos por corral</label>
-                <input type="number" min="5" max="50" step="1" value={pigsPerPen} onChange={(e) => setPigsPerPen(Number(e.target.value) || 20)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={pigsPerPenInput}
+                  onChange={(e) => setPigsPerPenInput(e.target.value)}
+                  onBlur={() => setPigsPerPenInput(String(pigsPerPen))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Peso objetivo (kg)</label>
-                <input type="number" min="100" max="140" step="1" value={targetWeight} onChange={(e) => setTargetWeight(Number(e.target.value) || 120)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
+                <input
+                  type="number"
+                  min="100"
+                  max="140"
+                  step="1"
+                  value={targetWeightInput}
+                  onChange={(e) => setTargetWeightInput(e.target.value)}
+                  onBlur={() => setTargetWeightInput(String(targetWeight))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">Cerdos a despachar</label>
-                <input type="number" min="1" max={totalPigs} step="1" value={dispatchCount} onChange={(e) => setDispatchCount(Number(e.target.value) || 1)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none" />
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPigs}
+                  step="1"
+                  value={dispatchCountInput}
+                  onChange={(e) => setDispatchCountInput(e.target.value)}
+                  onBlur={() => setDispatchCountInput(String(dispatchCount))}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                />
               </div>
               <div className="flex items-end">
                 <Button onClick={applyScenario} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 min-h-[52px]">
@@ -325,6 +358,7 @@ export default function App() {
                 <p>Haz clic sobre los cerdos que enviarías a sacrificio.</p>
                 <p>El modelo compara tu selección con una estrategia óptima basada en cercanía al peso objetivo, margen y penalización por dejar animales pasados o sacar animales muy livianos.</p>
                 <p className="font-semibold text-slate-800">Objetivo: seleccionar {maxSelection} animales alrededor de {targetWeight} kg.</p>
+                <p className="text-xs text-slate-500">Total de cerdos en escenario: {totalPigs}</p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Badge className="rounded-full bg-sky-100 text-sky-700">Liviano</Badge>
                   <Badge className="rounded-full bg-amber-100 text-amber-700">Intermedio</Badge>
