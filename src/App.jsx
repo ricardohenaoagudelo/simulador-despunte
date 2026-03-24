@@ -4,7 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
 import { RotateCcw, CheckCircle2, PiggyBank, Scale, Target, Settings2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 const PRICE_PER_KG = 7500;
 const FEED_COST_PER_KG = 1800;
@@ -38,6 +47,7 @@ function marginalScore(weight, targetWeight) {
 
 function buildPigWeights(lotIndex, penIndex, pigsPerPen) {
   const base = 96 + lotIndex * 3 + Math.floor(lotIndex / 2);
+
   return Array.from({ length: pigsPerPen }, (_, pigIndex) => {
     const progressive = pigIndex * 1.55;
     const penEffect = (penIndex % 5) * 0.7;
@@ -49,7 +59,9 @@ function buildPigWeights(lotIndex, penIndex, pigsPerPen) {
 function generatePens(numLots, pensPerLot, pigsPerPen) {
   return Array.from({ length: numLots }, (_, lotIndex) => {
     const lote = `Lote ${lotIndex + 1}`;
-    const edad = LOT_AGES[lotIndex] ?? LOT_AGES[LOT_AGES.length - 1] + (lotIndex - LOT_AGES.length + 1) * 7;
+    const edad =
+      LOT_AGES[lotIndex] ??
+      LOT_AGES[LOT_AGES.length - 1] + (lotIndex - LOT_AGES.length + 1) * 7;
 
     return Array.from({ length: pensPerLot }, (_, penIndex) => ({
       lote,
@@ -62,21 +74,19 @@ function generatePens(numLots, pensPerLot, pigsPerPen) {
 
 function StatPill({ icon: Icon, label, value }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border bg-white/70 px-4 py-3 shadow-sm">
-      <div className="rounded-xl bg-slate-100 p-2">
-        <Icon className="h-5 w-5" />
+    <div className="flex items-center gap-3 rounded-2xl border border-[#CCCCCC] bg-[#FFFFFF] px-4 py-3 shadow-sm">
+      <div className="rounded-xl bg-[#F7F7F7] p-2">
+        <Icon className="h-5 w-5 text-[#993935]" />
       </div>
       <div>
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="text-lg font-semibold text-slate-900">{value}</div>
+        <div className="text-xs text-[#8B8B8D]">{label}</div>
+        <div className="text-lg font-semibold text-[#1A1A1A]">{value}</div>
       </div>
     </div>
   );
 }
 
 function Pig({ pig, selected, onToggle }) {
-  
-
   return (
     <motion.button
       whileHover={{ scale: 1.03 }}
@@ -84,18 +94,21 @@ function Pig({ pig, selected, onToggle }) {
       onClick={() => onToggle(pig.id)}
       className={`group relative flex flex-col items-center rounded-2xl border p-3 transition-all ${
         selected
-          ? "border-emerald-500 bg-emerald-50 shadow-md"
-          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+          ? "border-[#993935] bg-[#FFFFFF] shadow-md"
+          : "border-[#CCCCCC] bg-[#FFFFFF] hover:border-[#993935] hover:shadow-sm"
       } cursor-pointer`}
     >
-      <div style={{ transform: `scale(${pig.size})` }} className="origin-center select-none leading-none transition-transform">
+      <div
+        style={{ transform: `scale(${pig.size})` }}
+        className="origin-center select-none leading-none transition-transform"
+      >
         🐖
       </div>
-      <div className="mt-2 text-sm font-semibold text-slate-800">{pig.weight} kg</div>
-      <div className="mt-1 text-[11px] text-slate-500">{pig.id}</div>
-      
+      <div className="mt-2 text-sm font-semibold text-[#1A1A1A]">{pig.weight} kg</div>
+      <div className="mt-1 text-[11px] text-[#8B8B8D]">{pig.id}</div>
+
       {selected && (
-        <div className="absolute right-2 top-2 rounded-full bg-emerald-500 p-1 text-white">
+        <div className="absolute right-2 top-2 rounded-full bg-[#993935] p-1 text-white shadow-sm">
           <CheckCircle2 className="h-4 w-4" />
         </div>
       )}
@@ -112,10 +125,38 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [evaluated, setEvaluated] = useState(false);
 
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  const ACCESS_PASSWORD = "alura123";
+  const EXPIRATION_DATE = new Date("2026-04-30T23:59:59");
+
+  const handleLogin = () => {
+    const today = new Date();
+
+    if (today > EXPIRATION_DATE) {
+      setLoginError("El acceso al simulador ha vencido.");
+      return;
+    }
+
+    if (password !== ACCESS_PASSWORD) {
+      setLoginError("Clave incorrecta. Intenta nuevamente.");
+      return;
+    }
+
+    setLoginError("");
+    setIsAuthenticated(true);
+  };
+
   const pigsPerPen = Math.max(1, Math.min(50, Number(pigsPerPenInput) || 20));
   const targetWeight = Math.max(100, Math.min(140, Number(targetWeightInput) || 120));
 
-  const penConfig = useMemo(() => generatePens(numLots, pensPerLot, pigsPerPen), [numLots, pensPerLot, pigsPerPen]);
+  const penConfig = useMemo(
+    () => generatePens(numLots, pensPerLot, pigsPerPen),
+    [numLots, pensPerLot, pigsPerPen]
+  );
+
   const totalPigs = numLots * pensPerLot * pigsPerPen;
   const dispatchCount = Math.max(1, Math.min(totalPigs || 1, Number(dispatchCountInput) || 1));
   const maxSelection = dispatchCount;
@@ -126,6 +167,7 @@ export default function App() {
         pen.pigs.map((weight, pigIndex) => {
           const optimalMin = targetWeight - 4;
           const optimalMax = targetWeight + 5;
+
           return {
             id: `${pen.corral}-${pigIndex + 1}`,
             lote: pen.lote,
@@ -163,8 +205,15 @@ export default function App() {
     [allPigs, maxSelection, targetWeight]
   );
 
-  const optimalPigs = useMemo(() => allPigs.filter((pig) => optimalSet.includes(pig.id)), [allPigs, optimalSet]);
-  const selectedPigs = useMemo(() => allPigs.filter((pig) => selectedIds.includes(pig.id)), [allPigs, selectedIds]);
+  const optimalPigs = useMemo(
+    () => allPigs.filter((pig) => optimalSet.includes(pig.id)),
+    [allPigs, optimalSet]
+  );
+
+  const selectedPigs = useMemo(
+    () => allPigs.filter((pig) => selectedIds.includes(pig.id)),
+    [allPigs, selectedIds]
+  );
 
   const applyScenario = () => {
     setSelectedIds([]);
@@ -193,10 +242,17 @@ export default function App() {
       ? (selectedPigs.reduce((sum, pig) => sum + pig.weight, 0) / selectedPigs.length).toFixed(1)
       : "0.0";
 
-  const accuracy = maxSelection > 0 ? Math.round((selectedIds.filter((id) => optimalSet.includes(id)).length / maxSelection) * 100) : 0;
+  const accuracy =
+    maxSelection > 0
+      ? Math.round(
+          (selectedIds.filter((id) => optimalSet.includes(id)).length / maxSelection) * 100
+        )
+      : 0;
+
   const selectedScore = selectedPigs.reduce((sum, pig) => sum + pig.score, 0);
   const optimalScore = optimalPigs.reduce((sum, pig) => sum + pig.score, 0);
-  const efficiency = optimalScore > 0 ? Math.max(0, Math.round((selectedScore / optimalScore) * 100)) : 0;
+  const efficiency =
+    optimalScore > 0 ? Math.max(0, Math.round((selectedScore / optimalScore) * 100)) : 0;
 
   const feedback =
     accuracy >= 80
@@ -218,37 +274,95 @@ export default function App() {
 
     return bins.map((bin) => ({
       rango: bin.label,
-      seleccionados: selectedPigs.filter((pig) => pig.weight >= bin.min && pig.weight < bin.max).length,
+      seleccionados: selectedPigs.filter(
+        (pig) => pig.weight >= bin.min && pig.weight < bin.max
+      ).length,
       optimos: optimalPigs.filter((pig) => pig.weight >= bin.min && pig.weight < bin.max).length,
     }));
   }, [selectedPigs, optimalPigs]);
 
   const lots = Array.from({ length: numLots }, (_, i) => `Lote ${i + 1}`);
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-3xl border border-[#CCCCCC] bg-white shadow-xl overflow-hidden">
+          <div className="bg-[#993935] px-8 py-8 text-white">
+            <div className="text-xs uppercase tracking-[0.2em] text-white/80 mb-2">Alura</div>
+            <h1 className="text-3xl font-bold">Acceso al simulador</h1>
+            <p className="mt-3 text-sm text-white/90">
+              Ingresa la clave para acceder al simulador de despunte estratégico.
+            </p>
+          </div>
+
+          <div className="px-8 py-8 space-y-5">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[#1A1A1A]">Clave de acceso</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleLogin();
+                }}
+                placeholder="Ingresa tu clave"
+                className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 text-[#1A1A1A] outline-none focus:ring-2 focus:ring-[#EB5852]"
+              />
+            </div>
+
+            {loginError && (
+              <div className="rounded-2xl border border-[#EB5852] bg-[#FFF5F5] px-4 py-3 text-sm text-[#993935]">
+                {loginError}
+              </div>
+            )}
+
+            <button
+              onClick={handleLogin}
+              className="w-full rounded-2xl bg-[#993935] px-4 py-3 text-white font-semibold hover:opacity-90 transition"
+            >
+              Ingresar
+            </button>
+
+            <div className="text-xs text-[#8B8B8D] text-center">
+              Acceso protegido · Versión Alura
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-stone-50 to-emerald-50 p-4 md:p-6 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-white to-white p-4 md:p-6 text-[#1A1A1A]">
       <div className="mx-auto max-w-7xl space-y-6">
-        <Card className="overflow-hidden rounded-3xl border-0 shadow-xl">
-          <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-6 md:p-8 text-white">
+        <Card className="overflow-hidden rounded-3xl border border-[#CCCCCC] shadow-xl">
+          <div className="bg-gradient-to-r from-[#993935] via-[#993935] to-[#993935] p-6 md:p-8 text-white">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <div className="mb-2 text-xs md:text-sm uppercase tracking-[0.2em] text-emerald-100">Simulador Web "Creado por Ricardo Henao"</div>
-                <h1 className="text-3xl font-bold md:text-4xl">Despunte estratégico de cerdos</h1>
-                <p className="mt-3 max-w-3xl text-sm md:text-base text-emerald-50">
-                  Configura cuántos lotes, cuántos corrales, cuántos cerdos por corral, cuántos quieres despachar y cuál es el peso objetivo.
+                <div className="mb-2 text-xs md:text-sm uppercase tracking-[0.2em] text-white/80">
+                  Simulador Web
+                </div>
+                <h1 className="text-3xl font-bold md:text-4xl">
+                  Despunte estratégico de cerdos
+                </h1>
+                <p className="mt-3 max-w-3xl text-sm md:text-base text-white/90">
+                  Configura cuántos lotes, cuántos corrales, cuántos cerdos por corral, cuántos
+                  quieres despachar y cuál es el peso objetivo.
                 </p>
               </div>
-              <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto md:min-w-[360px]">
+
+              <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto md:min-w-[420px]">
                 <Button
                   onClick={() => setEvaluated(true)}
-                  className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
+                   className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
                 >
-                  <span className="inline-flex w-full items-center justify-center">Evaluar selección</span>
+                  Evaluar selección
                 </Button>
+
                 <Button
                   onClick={resetGame}
                   variant="outline"
-                  className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
+                   className="w-full rounded-2xl border-white/70 bg-white/10 text-white hover:bg-white/20 min-h-[54px] px-5 text-base font-semibold"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" /> Reiniciar
                 </Button>
@@ -257,26 +371,47 @@ export default function App() {
           </div>
         </Card>
 
-        <Card className="rounded-3xl shadow-sm">
+        <Card className="rounded-3xl border border-[#CCCCCC] shadow-sm bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5" /> Configuración del escenario</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-[#1A1A1A]">
+              <Settings2 className="h-5 w-5 text-[#993935]" /> Configuración del escenario
+            </CardTitle>
           </CardHeader>
+
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Número de lotes</label>
-                <select value={numLots} onChange={(e) => setNumLots(Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none">
-                  {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+                <label className="text-sm font-medium text-[#1A1A1A]">Número de lotes</label>
+                <select
+                  value={numLots}
+                  onChange={(e) => setNumLots(Number(e.target.value))}
+                  className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 outline-none text-[#1A1A1A] focus:ring-2 focus:ring-[#EB5852]"
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Corrales por lote</label>
-                <select value={pensPerLot} onChange={(e) => setPensPerLot(Number(e.target.value))} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none">
-                  {[2, 4, 6, 8, 10].map((n) => <option key={n} value={n}>{n}</option>)}
+                <label className="text-sm font-medium text-[#1A1A1A]">Corrales por lote</label>
+                <select
+                  value={pensPerLot}
+                  onChange={(e) => setPensPerLot(Number(e.target.value))}
+                  className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 outline-none text-[#1A1A1A] focus:ring-2 focus:ring-[#EB5852]"
+                >
+                  {[2, 4, 6, 8, 10].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Cerdos por corral</label>
+                <label className="text-sm font-medium text-[#1A1A1A]">Cerdos por corral</label>
                 <input
                   type="number"
                   min="1"
@@ -285,11 +420,12 @@ export default function App() {
                   value={pigsPerPenInput}
                   onChange={(e) => setPigsPerPenInput(e.target.value)}
                   onBlur={() => setPigsPerPenInput(String(pigsPerPen))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                  className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 outline-none text-[#1A1A1A] focus:ring-2 focus:ring-[#EB5852]"
                 />
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Peso objetivo (kg)</label>
+                <label className="text-sm font-medium text-[#1A1A1A]">Peso objetivo (kg)</label>
                 <input
                   type="number"
                   min="100"
@@ -298,11 +434,12 @@ export default function App() {
                   value={targetWeightInput}
                   onChange={(e) => setTargetWeightInput(e.target.value)}
                   onBlur={() => setTargetWeightInput(String(targetWeight))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                  className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 outline-none text-[#1A1A1A] focus:ring-2 focus:ring-[#EB5852]"
                 />
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Cerdos a despachar</label>
+                <label className="text-sm font-medium text-[#1A1A1A]">Cerdos a despachar</label>
                 <input
                   type="number"
                   min="1"
@@ -311,11 +448,15 @@ export default function App() {
                   value={dispatchCountInput}
                   onChange={(e) => setDispatchCountInput(e.target.value)}
                   onBlur={() => setDispatchCountInput(String(dispatchCount))}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none"
+                  className="w-full rounded-2xl border border-[#CCCCCC] bg-white px-4 py-3 outline-none text-[#1A1A1A] focus:ring-2 focus:ring-[#EB5852]"
                 />
               </div>
+
               <div className="flex items-end">
-                <Button onClick={applyScenario} className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 min-h-[52px]">
+                <Button
+                  onClick={applyScenario}
+                  className="w-full rounded-2xl bg-[#993935] text-white hover:opacity-90 min-h-[52px] font-semibold"
+                >
                   Aplicar escenario
                 </Button>
               </div>
@@ -324,7 +465,11 @@ export default function App() {
         </Card>
 
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
-          <StatPill icon={PiggyBank} label="Seleccionados" value={`${selectedIds.length}/${maxSelection}`} />
+          <StatPill
+            icon={PiggyBank}
+            label="Seleccionados"
+            value={`${selectedIds.length}/${maxSelection}`}
+          />
           <StatPill icon={Scale} label="Peso promedio" value={`${selectedAvg} kg`} />
           <StatPill icon={Target} label="Acierto vs óptimo" value={`${accuracy}%`} />
           <StatPill icon={CheckCircle2} label="Eficiencia económica" value={`${efficiency}%`} />
@@ -336,26 +481,41 @@ export default function App() {
             {lots.map((lote) => {
               const pens = penConfig.filter((p) => p.lote === lote);
               const edad = pens[0]?.edad;
+
               return (
                 <div key={lote} className="space-y-3">
-                  <h2 className="text-xl font-bold text-slate-800">
-                    {lote} <span className="text-base font-medium text-slate-500">({edad} días)</span>
+                  <h2 className="text-xl font-bold text-[#1A1A1A]">
+                    {lote}{" "}
+                    <span className="text-base font-medium text-[#8B8B8D]">({edad} días)</span>
                   </h2>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     {pens.map((pen) => {
                       const pigs = allPigs.filter((p) => p.corral === pen.corral);
+
                       return (
-                        <Card key={pen.corral} className="rounded-3xl border-slate-200 shadow-sm">
+                        <Card
+                          key={pen.corral}
+                          className="rounded-3xl border border-[#CCCCCC] shadow-sm bg-white"
+                        >
                           <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center justify-between text-lg">
+                            <CardTitle className="flex items-center justify-between text-lg text-[#1A1A1A]">
                               {pen.corral}
-                              <Badge className="rounded-full bg-slate-100 text-slate-700">{pigs.length} cerdos</Badge>
+                              <Badge className="rounded-full bg-[#F7F7F7] text-[#8B8B8D] border border-[#CCCCCC]">
+                                {pigs.length} cerdos
+                              </Badge>
                             </CardTitle>
                           </CardHeader>
+
                           <CardContent>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                               {pigs.map((pig) => (
-                                <Pig key={pig.id} pig={pig} selected={selectedIds.includes(pig.id)} onToggle={togglePig} />
+                                <Pig
+                                  key={pig.id}
+                                  pig={pig}
+                                  selected={selectedIds.includes(pig.id)}
+                                  onToggle={togglePig}
+                                />
                               ))}
                             </div>
                           </CardContent>
@@ -369,68 +529,99 @@ export default function App() {
           </div>
 
           <div className="space-y-6">
-            <Card className="rounded-3xl shadow-sm">
+            <Card className="rounded-3xl border border-[#CCCCCC] shadow-sm bg-white">
               <CardHeader>
-                <CardTitle>Reglas rápidas</CardTitle>
+                <CardTitle className="text-[#1A1A1A]">Reglas rápidas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-600">
+
+              <CardContent className="space-y-3 text-sm text-[#8B8B8D]">
                 <p>Haz clic sobre los cerdos que enviarías a sacrificio.</p>
-                <p>El modelo compara tu selección con una estrategia óptima basada en cercanía al peso objetivo, margen y penalización por dejar animales pasados o sacar animales muy livianos.</p>
-                <p className="font-semibold text-slate-800">Objetivo: seleccionar {maxSelection} animales alrededor de {targetWeight} kg.</p>
-                <p className="text-xs text-slate-500">Total de cerdos en escenario: {totalPigs}</p>
+                <p>
+                  El modelo compara tu selección con una estrategia óptima basada en cercanía al
+                  peso objetivo, margen y penalización por dejar animales pasados o sacar animales
+                  muy livianos.
+                </p>
+                <p className="font-semibold text-[#1A1A1A]">
+                  Objetivo: seleccionar {maxSelection} animales alrededor de {targetWeight} kg.
+                </p>
+                <p className="text-xs text-[#8B8B8D]">Total de cerdos en escenario: {totalPigs}</p>
+
                 <div className="flex flex-wrap gap-2 pt-2">
-                  <Badge className="rounded-full bg-sky-100 text-sky-700">Liviano</Badge>
-                  <Badge className="rounded-full bg-amber-100 text-amber-700">Intermedio</Badge>
-                  <Badge className="rounded-full bg-emerald-100 text-emerald-700">Óptimo</Badge>
-                  <Badge className="rounded-full bg-rose-100 text-rose-700">Pasado</Badge>
+                  <Badge className="rounded-full bg-white text-[#8B8B8D] border border-[#CCCCCC]">
+                    Escenario neutro
+                  </Badge>
+                  <Badge className="rounded-full bg-white text-[#993935] border border-[#993935]">
+                    Selección marcada
+                  </Badge>
+                  <Badge className="rounded-full bg-[#FFF5F5] text-[#EB5852] border border-[#EB5852]">
+                    Alerta / diferencia crítica
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="rounded-3xl shadow-sm">
+            <Card className="rounded-3xl border border-[#CCCCCC] shadow-sm bg-white">
               <CardHeader>
-                <CardTitle>Tu selección</CardTitle>
+                <CardTitle className="text-[#1A1A1A]">Tu selección</CardTitle>
               </CardHeader>
+
               <CardContent className="max-h-[420px] space-y-2 overflow-auto text-sm">
                 {selectedPigs.length === 0 ? (
-                  <p className="text-slate-500">Aún no has seleccionado cerdos.</p>
+                  <p className="text-[#8B8B8D]">Aún no has seleccionado cerdos.</p>
                 ) : (
-                  selectedPigs.slice().sort((a, b) => b.weight - a.weight).map((pig) => (
-                    <div key={pig.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2">
-                      <span className="font-medium">{pig.id}</span>
-                      <span className="text-slate-600">{pig.weight} kg</span>
-                    </div>
-                  ))
+                  selectedPigs
+                    .slice()
+                    .sort((a, b) => b.weight - a.weight)
+                    .map((pig) => (
+                      <div
+                        key={pig.id}
+                        className="flex items-center justify-between rounded-xl bg-white border border-[#CCCCCC] px-3 py-2"
+                      >
+                        <span className="font-medium text-[#1A1A1A]">{pig.id}</span>
+                        <span className="text-[#8B8B8D]">{pig.weight} kg</span>
+                      </div>
+                    ))
                 )}
               </CardContent>
             </Card>
 
             {evaluated && (
               <>
-                <Card className="rounded-3xl border-emerald-200 bg-emerald-50/60 shadow-sm">
+                <Card className="rounded-3xl border border-[#CCCCCC] bg-white shadow-sm">
                   <CardHeader>
-                    <CardTitle>Resultado</CardTitle>
+                    <CardTitle className="text-[#1A1A1A]">Resultado</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 text-sm text-slate-700">
-                    <p className="font-semibold text-slate-900">{feedback}</p>
+
+                  <CardContent className="space-y-4 text-sm text-[#8B8B8D]">
+                    <p className="font-semibold text-[#1A1A1A]">{feedback}</p>
+
                     <div>
-                      <div className="mb-2 font-semibold text-slate-900">El óptimo era este:</div>
-                      <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
+                      <div className="mb-2 font-semibold text-[#1A1A1A]">El óptimo era este:</div>
+                      <div className="max-h-36 overflow-auto rounded-2xl bg-white border border-[#CCCCCC] p-3">
                         <div className="flex flex-wrap gap-2">
                           {optimalPigs.map((pig) => (
-                            <Badge key={pig.id} className="rounded-full bg-emerald-600 text-white">
+                            <Badge
+                              key={pig.id}
+                              className="rounded-full bg-[#993935] text-white border border-[#993935]"
+                            >
                               {pig.id} · {pig.weight} kg
                             </Badge>
                           ))}
                         </div>
                       </div>
                     </div>
+
                     <div>
-                      <div className="mb-2 font-semibold text-slate-900">Y tú seleccionaste estos:</div>
-                      <div className="max-h-36 overflow-auto rounded-2xl bg-white/70 p-3">
+                      <div className="mb-2 font-semibold text-[#1A1A1A]">
+                        Y tú seleccionaste estos:
+                      </div>
+                      <div className="max-h-36 overflow-auto rounded-2xl bg-white border border-[#CCCCCC] p-3">
                         <div className="flex flex-wrap gap-2">
                           {selectedPigs.map((pig) => (
-                            <Badge key={pig.id} className="rounded-full bg-slate-700 text-white">
+                            <Badge
+                              key={pig.id}
+                              className="rounded-full bg-[#8B8B8D] text-white border border-[#8B8B8D]"
+                            >
                               {pig.id} · {pig.weight} kg
                             </Badge>
                           ))}
@@ -440,21 +631,37 @@ export default function App() {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-3xl shadow-sm">
+                <Card className="rounded-3xl border border-[#CCCCCC] shadow-sm bg-white">
                   <CardHeader>
-                    <CardTitle>Gráfico comparativo</CardTitle>
+                    <CardTitle className="text-[#1A1A1A]">Gráfico comparativo</CardTitle>
                   </CardHeader>
+
                   <CardContent>
                     <div className="h-[280px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="rango" fontSize={12} />
-                          <YAxis allowDecimals={false} fontSize={12} />
-                          <Tooltip />
+                          <CartesianGrid stroke="#CCCCCC" strokeDasharray="3 3" />
+                          <XAxis dataKey="rango" fontSize={12} stroke="#8B8B8D" />
+                          <YAxis allowDecimals={false} fontSize={12} stroke="#8B8B8D" />
+                          <Tooltip
+                            contentStyle={{
+                              borderColor: "#CCCCCC",
+                              borderRadius: "12px",
+                            }}
+                          />
                           <Legend />
-                          <Bar dataKey="seleccionados" name="Tu selección" fill="#334155" radius={[6, 6, 0, 0]} />
-                          <Bar dataKey="optimos" name="Óptimo" fill="#059669" radius={[6, 6, 0, 0]} />
+                          <Bar
+                            dataKey="seleccionados"
+                            name="Tu selección"
+                            fill="#8B8B8D"
+                            radius={[6, 6, 0, 0]}
+                          />
+                          <Bar
+                            dataKey="optimos"
+                            name="Óptimo"
+                            fill="#993935"
+                            radius={[6, 6, 0, 0]}
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
